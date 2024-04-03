@@ -1,0 +1,32 @@
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  ENVIRONMENT: "production"
+  DOCKER_REGISTRY: "registry.example.com"
+
+before_script:
+  - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $DOCKER_REGISTRY
+
+build_job:
+  stage: build
+  script:
+    - docker build -t $DOCKER_REGISTRY/myapp:$CI_COMMIT_SHA .
+
+test_job:
+  stage: test
+  script:
+    - docker run --rm $DOCKER_REGISTRY/myapp:$CI_COMMIT_SHA npm test
+
+deploy_job:
+  stage: deploy
+  script:
+    - docker push $DOCKER_REGISTRY/myapp:$CI_COMMIT_SHA
+    - ssh user@server "docker pull $DOCKER_REGISTRY/myapp:$CI_COMMIT_SHA && docker-compose up -d"
+  environment:
+    name: $ENVIRONMENT
+    url: http://example.com
+  only:
+    - master
